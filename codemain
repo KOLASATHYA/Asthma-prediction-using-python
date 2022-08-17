@@ -1,0 +1,131 @@
+from google.colab import drive
+drive.mount('/content/drive')
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+%matplotlib inline
+data_frame = pd.read_csv("/content/drive/MyDrive/major project /astma pred-20220419T144509Z-001-20220425T051101Z-001/astma pred-20220419T144509Z-001/astma pred/FinalData.csv")
+
+data_frame.shape
+print("Missing values?")
+print(data_frame.isnull().values.any())
+print("ereasing null values.")
+data_frame = data_frame.dropna()
+
+print("Missing values?")
+print(data_frame.isnull().values.any())
+data_frame.shape
+asthma_map = {True : 1, False : 0}
+data_frame['ASTHMA'] = data_frame['ASTHMA'].map(asthma_map)
+
+sleep_map = {True : 1, False : 0}
+data_frame['SLEEPING_PROB'] = data_frame['SLEEPING_PROB'].map(sleep_map)
+
+chest_map = {True : 1, False : 0}
+data_frame['CHEST_TIGHTNESS'] = data_frame['CHEST_TIGHTNESS'].map(chest_map)
+
+breath_map = {True : 1, False : 0}
+data_frame['BREATH'] = data_frame['BREATH'].map(breath_map)
+
+cough_map = {True : 1, False : 0}
+data_frame['COUGH'] = data_frame['COUGH'].map(cough_map)
+
+allergy_map = {True : 1, False : 0}
+data_frame['ALLERGY'] = data_frame['ALLERGY'].map(allergy_map)
+
+sex_map = {'M' : 1, 'F' : 0, 'U' : 2}
+data_frame['SEX'] = data_frame['SEX'].map(sex_map)
+
+wheezing_map = {True : 1, False : 0}
+data_frame['WHEEZING'] = data_frame['WHEEZING'].map(wheezing_map)
+
+vax_data = data_frame['VAX_TYPE']
+vax=[]
+for items in vax_data:
+    if items in vax:
+        continue
+    else:
+        #print(items)
+        vax.append(items)
+#print("Vax list: ")
+#print(vax)
+key=0
+vax_map={key: value for (key, value) in zip(vax,range(len(vax))) }
+data_frame['VAX_TYPE'] = data_frame['VAX_TYPE'].map(vax_map)
+num_obs = len(data_frame)
+num_true = len(data_frame.loc[data_frame['ASTHMA'] == 1])
+num_false = len(data_frame.loc[data_frame['ASTHMA'] == 0])
+print("Number of True cases:  {0} ({1:2.2f}%)".format(num_true, ((1.00 * num_true)/(1.0 * num_obs)) * 100))
+print("Number of False cases: {0} ({1:2.2f}%)".format(num_false, (( 1.0 * num_false)/(1.0 * num_obs)) * 100))
+from sklearn.model_selection import train_test_split
+
+feature_col_names = ['VAX_TYPE', 'AGE_YRS', 'SEX', 'SLEEPING_PROB', 'CHEST_TIGHTNESS', 'BREATH', 'COUGH', 'ALLERGY','WHEEZING']
+predicted_class_names = ['ASTHMA']
+
+X = data_frame[feature_col_names].values     # predictor feature columns (8 X m)
+y = data_frame[predicted_class_names].values # predicted class (1=true, 0=false) column (1 X m)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=0) 
+
+print("split varirfication:")
+trainval = (1.0 * len(X_train)) / (1.0 * len(data_frame.index))
+testval = (1.0 * len(X_test)) / (1.0 * len(data_frame.index))
+print("{0:0.2f}% in training set".format(trainval * 100))
+print("{0:0.2f}% in test set".format(testval * 100))
+print("\nOriginal True  : {0} ({1:0.2f}%)".format(len(data_frame.loc[data_frame['ASTHMA'] == 1]), (len(data_frame.loc[data_frame['ASTHMA'] == 1])/len(data_frame.index)) * 100.0))
+print("Original False : {0} ({1:0.2f}%)".format(len(data_frame.loc[data_frame['ASTHMA'] == 0]), (len(data_frame.loc[data_frame['ASTHMA'] == 0])/len(data_frame.index)) * 100.0))
+print("")
+print("Training True  : {0} ({1:0.2f}%)".format(len(y_train[y_train[:] == 1]), (len(y_train[y_train[:] == 1])/len(y_train) * 100.0)))
+print("Training False : {0} ({1:0.2f}%)".format(len(y_train[y_train[:] == 0]), (len(y_train[y_train[:] == 0])/len(y_train) * 100.0)))
+print("")
+print("Test True      : {0} ({1:0.2f}%)".format(len(y_test[y_test[:] == 1]), (len(y_test[y_test[:] == 1])/len(y_test) * 100.0)))
+print("Test False     : {0} ({1:0.2f}%)".format(len(y_test[y_test[:] == 0]), (len(y_test[y_test[:] == 0])/len(y_test) * 100.0)))
+from sklearn.preprocessing import StandardScaler  
+scaler = StandardScaler()  
+scaler.fit(X_train)
+
+X_train = scaler.transform(X_train)  
+X_test = scaler.transform(X_test)
+from sklearn.neural_network import MLPClassifier  
+mlp = MLPClassifier(hidden_layer_sizes=(10, 10, 10), max_iter=1000)  
+mlp.fit(X_train, y_train.ravel())  
+from sklearn import metrics
+print("ANN performance on Training Data:")
+print("Accuracy: {0:.4f}\n".format(metrics.accuracy_score(y_train, mlp.predict(X_train))))
+
+predictions = mlp.predict(X_test)  
+print("ANN performance on Test Data:")
+print("Accuracy: {0:.4f}\n".format(metrics.accuracy_score(y_test, predictions)))
+from sklearn.metrics import classification_report, confusion_matrix 
+
+print("Confusion Matrix for Artificial Neural Network")
+print("{0}".format(confusion_matrix(y_test,predictions,labels=[1,0])))  
+
+print("\nClassification Report")
+print("{0}".format(classification_report(y_test,predictions, labels=[1, 0]))) 
+import numpy as np
+import matplotlib.pyplot as plt
+
+ann = np.array([0.006,0.70 ])
+
+# plotting
+plt.scatter(ann[0], ann[1], label = 'Artificial Neural Network', facecolors='red', edgecolors='black', s=300)
+
+plt.plot([0, 1], [0, 1], 'k--')
+plt.xlim([-0.02, 1.0])
+plt.ylim([0, 1.0])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('Receiver operating characteristic curve')
+plt.legend(loc='lower center')
+
+plt.show()
+dd= [[vax_type,age_yrs,sex,sleep_prob,chest_tightnes,breath,cough,allergy,wheezing]]
+sc = scaler.transform(dd)
+result = mlp.predict(sc)
+if result[0]==1:
+  print("ASTHMA")
+else:
+  print("NO ASTHMA")
+
+
